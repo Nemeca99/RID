@@ -12,6 +12,12 @@ dist/
 build/
 .eggs/
 
+# HW-Info telemetry logs (can grow to GBs — extract data programmatically)
+# Python analysis scripts in HW-Info/ are tracked; raw CSVs are not.
+HW-Info/*.CSV
+HW-Info/*.csv
+HW-Info/*.log
+
 # Virtual environments
 .venv/
 venv/
