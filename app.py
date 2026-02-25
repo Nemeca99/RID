@@ -361,7 +361,7 @@ with tab_calc:
           <div class="phys-value" style="color:{color}">{value:.4f}<span style="font-size:0.7rem;color:#3a5a84"> {unit}</span></div>
         </div>""", unsafe_allow_html=True)
 
-    phys_card(p1, "Λ_carnot",   ps.lambda_carnot,   "%",  "#00d4ff")
+    phys_card(p1, "Λ_floor",   ps.lambda_floor,   "%",  "#00d4ff")
     phys_card(p2, "Λ_mismatch", ps.lambda_mismatch, "%",  "#ffaa00" if ps.lambda_mismatch > 0.1 else "#4a7aaa")
     phys_card(p3, "Λ_total",    ps.lambda_total,    "%",  "#ff8844" if ps.lambda_total > 0.3 else "#4a7aaa")
     phys_card(p4, "F_raw",      ps.raw_force,       "u",  "#bb88ff")
@@ -462,7 +462,7 @@ with tab_import:
                 results.append({
                     "RLE": round(_RLE, 4), "LTP": round(_LTP, 4),
                     "RSR": round(_RSR, 4), "S_n": round(_Sn, 4),
-                    "λ_carnot": round(_ps.lambda_carnot, 4),
+                    "Λ_floor": round(_ps.lambda_floor, 4),
                     "λ_mismatch": round(_ps.lambda_mismatch, 4),
                     "F_realized": round(_ps.realized_force, 4),
                     "descent": _ps.kernel_descent,
@@ -537,7 +537,7 @@ with tab_ref:
             ("LTP_n = min(1, n_n / d_n)",         "Layer Transition Principle — structure meets demand",    "LTP Canonical Spec"),
             ("RSR_n = 1 − D(y_n, recon_n)",       "Recursive State Reconstruction — identity continuity",  "RSR PDF"),
             ("S_n = RSR × LTP × RLE",             "Master stability scalar — product of all three axes",   "Canonical Spec"),
-            ("Λ_carnot = T_c / T_h = 1/VRAM",    "Irreducible second-law heat loss — hardware floor",     "Semantic Physics PDF"),
+            ("Λ_floor = T_c / T_h = 1/VRAM",    "Irreducible second-law heat loss — hardware floor",     "Semantic Physics PDF"),
             ("F_raw = mass × S_n",                "Newtonian output force — S_n acts as acceleration",     "Semantic Physics PDF"),
             ("F_real = F_raw − friction − loss",  "Realized force — what actually reaches token output",   "Semantic Physics PDF"),
         ]:
@@ -565,11 +565,13 @@ with tab_ref:
               <div style="color:#6a8aaa;font-size:0.72rem;margin-top:4px">{desc}</div>
             </div>""", unsafe_allow_html=True)
 
-        st.markdown("### GPU Carnot Floors")
+        st.markdown("### GPU capacity floors")
         gpu_table = pd.DataFrame([
-            {"GPU": "RTX 3060 Ti 8GB",  "Λ_carnot": "12.50%", "Efficiency@1200T": "85.2%"},
-            {"GPU": "RTX 4080 16GB",    "Λ_carnot": "6.25%",  "Efficiency@1200T": "91.8%"},
-            {"GPU": "RTX 4090 24GB",    "Λ_carnot": "4.17%",  "Efficiency@1200T": "94.0%"},
-            {"GPU": "H100 80GB",        "Λ_carnot": "1.25%",  "Efficiency@1200T": "97.1%"},
+            {"GPU": "RTX 3060 Ti 8GB",  "Λ_floor": "12.50%", "Efficiency@1200T": "85.2%"},
+            {"GPU": "RTX 4080 16GB",    "Λ_floor": "6.25%",  "Efficiency@1200T": "91.8%"},
+            {"GPU": "RTX 4090 24GB",    "Λ_floor": "4.17%",  "Efficiency@1200T": "94.0%"},
+            {"GPU": "H100 80GB",        "Λ_floor": "1.25%",  "Efficiency@1200T": "97.1%"},
         ])
         st.dataframe(gpu_table, use_container_width=True, hide_index=True, height=168)
+
+

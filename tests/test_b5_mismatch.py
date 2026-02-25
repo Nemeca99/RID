@@ -35,7 +35,7 @@ def run_b5():
         ps = physics.compute(s_n=S_N_FIXED, stm_load=0.0, ltp=ltp, rle=RLE_FIXED,
                              prompt_tokens=TOKENS_FIXED)
         d = "YES ⚠" if ps.kernel_descent else "no"
-        print(f"{ltp:>6.1f} | {ps.lambda_carnot:>9.4f} | {ps.lambda_mismatch:>10.4f} | "
+        print(f"{ltp:>6.1f} | {ps.lambda_floor:>9.4f} | {ps.lambda_mismatch:>10.4f} | "
               f"{ps.lambda_total:>8.4f} | {ps.raw_force:>7.4f} | {ps.realized_force:>8.4f} | {d}")
         rows.append(dict(ltp=ltp, ps=ps))
 
@@ -47,8 +47,8 @@ def test_carnot_floor_is_constant():
     """Λ_carnot = T_c/T_h = 1/8 = 0.125 for 8GB GPU — invariant across LTP."""
     rows = run_b5()
     for r in rows:
-        assert abs(r["ps"].lambda_carnot - 0.125) < 1e-9, \
-            f"Carnot floor changed: {r['ps'].lambda_carnot}"
+        assert abs(r["ps"].lambda_floor - 0.125) < 1e-9, \
+            f"Carnot floor changed: {r['ps'].lambda_floor}"
 
 
 def test_mismatch_increases_as_ltp_falls():
@@ -64,7 +64,7 @@ def test_lambda_total_additive():
     rows = run_b5()
     for r in rows:
         ps = r["ps"]
-        expected = min(1.0, ps.lambda_carnot + ps.lambda_mismatch)
+        expected = min(1.0, ps.lambda_floor + ps.lambda_mismatch)
         assert abs(ps.lambda_total - expected) < 1e-9
 
 
@@ -87,3 +87,6 @@ def test_kernel_does_not_fire_at_high_ltp():
 
 if __name__ == "__main__":
     run_b5()
+
+
+

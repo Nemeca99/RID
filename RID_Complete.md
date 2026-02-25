@@ -43,11 +43,11 @@ In Phase 13 (2026-02-24), the **Semantic Physics Engine** was added to translate
 
 ```
 F_raw      = prompt_mass × S_n         → Newton's 2nd Law (S_n is acceleration)
-Λ_carnot   = 1.0 / gpu_vram_gb         → Irreducible second-law heat loss
+Λ_floor   = 1.0 / gpu_vram_gb         → Irreducible second-law heat loss
 F_realized = F_raw − friction − losses → What actually reaches the output
 ```
 
-**Key result:** A stability score of `S_n = 0.8535` looks like a 14.65% degradation. Through the physics engine it translates to **25.1% of output force lost** — because stability decay is nonlinear when compounded with an irreducible Carnot floor.
+**Key result:** A stability score of `S_n = 0.8535` looks like a 14.65% degradation. Through the physics engine it translates to **25.1% of output force lost** — because stability decay is nonlinear when compounded with an irreducible capacity floor.
 
 ### How to Use This Document
 
@@ -73,9 +73,9 @@ python verify/run_all.py
 
 **Title:** RID: A Dimensionless Stability Framework from RLE–LTP–RSR with Internal and External Consistency Verification
 
-**Abstract:** We present RID (RLE–LTP–RSR), a dimensionless stability framework for recursive and resource-constrained systems. It combines three legs—Recursive Load Efficiency (RLE), Layer Transition Principle (LTP), and Recursive State Reconstruction (RSR)—into a stability scalar S_n and supports multi-step analysis (FIDF) and an operational voltage law (SEOL). The framework is fully implemented from ten source PDF specifications. In Phase 13 we add the **Semantic Physics Engine**, which translates the dimensionless S_n into physically grounded Newtonian force and Carnot-bounded thermodynamic loss, proving that stability decay has a measurable hardware cost. Consistency is ensured in three ways: (1) **internal**—document formulas and narrative are self-consistent and checked by script; (2) **external (doc–code)**—written claims are verified against the implementation (20 tests, 16 doc checks PASS as of 2026-02-24); (3) **external (code–spec)**—key formula phrases are traced to the extracted source text. We apply RID to a generic extrusion heater process and show that the triangle points to the loss/stress path rather than overload or control instability. Reproducibility is fully specified; all verification scripts are runnable from the project root.
+**Abstract:** We present RID (RLE–LTP–RSR), a dimensionless stability framework for recursive and resource-constrained systems. It combines three legs—Recursive Load Efficiency (RLE), Layer Transition Principle (LTP), and Recursive State Reconstruction (RSR)—into a stability scalar S_n and supports multi-step analysis (FIDF) and an operational voltage law (SEOL). The framework is fully implemented from ten source PDF specifications. In Phase 13 we add the **Semantic Physics Engine**, which translates the dimensionless S_n into physically grounded Newtonian force and capacity-floor-bounded thermodynamic loss, proving that stability decay has a measurable hardware cost. Consistency is ensured in three ways: (1) **internal**—document formulas and narrative are self-consistent and checked by script; (2) **external (doc–code)**—written claims are verified against the implementation (20 tests, 16 doc checks PASS as of 2026-02-24); (3) **external (code–spec)**—key formula phrases are traced to the extracted source text. We apply RID to a generic extrusion heater process and show that the triangle points to the loss/stress path rather than overload or control instability. Reproducibility is fully specified; all verification scripts are runnable from the project root.
 
-**Keywords:** stability framework, RLE, LTP, RSR, dimensionless, FIDF, SEOL, semantic physics, Carnot bound, Newtonian force, kernel descent, internal consistency, external consistency, verification, extrusion, reproducibility.
+**Keywords:** stability framework, RLE, LTP, RSR, dimensionless, FIDF, SEOL, semantic physics, capacity loss floor, Newtonian force, kernel descent, internal consistency, external consistency, verification, extrusion, reproducibility.
 
 ---
 
@@ -145,7 +145,7 @@ Text can be extracted with: `python -m RID --extract-pdf` (output in `RID/extrac
 
 ### 2.4 Other elements from specs
 
-Thermodynamics (Carnot bound, lambda mismatch, coupling-amplified loss), FIDF multi-step loop (four callbacks: observable, reconstruction, support/demand, capacity), diagnostic step (continue / check_ltp / mandatory_descent / intervene_rle / check_rsr). Exact diagnostic thresholds are in the codebase.
+Thermodynamics (capacity loss floor, lambda mismatch, coupling-amplified loss), FIDF multi-step loop (four callbacks: observable, reconstruction, support/demand, capacity), diagnostic step (continue / check_ltp / mandatory_descent / intervene_rle / check_rsr). Exact diagnostic thresholds are in the codebase.
 
 ### 2.5 Physical Extension: Semantic Physics Engine (Phase 13, 2026-02-24)
 
@@ -155,9 +155,9 @@ Translates the dimensionless S_n into hardware-grounded physical quantities, com
 |---|---|---|
 | Prompt Mass | `m = tokens × 0.25` | Physical weight of the prompt in token-mass units |
 | Acceleration | `a = S_n` | Stability scalar IS the acceleration — S_n=1 = max output rate |
-| Λ_carnot | `T_c / T_h = 1.0 / gpu_vram_gb` | Irreducible second-law heat floor (T_c=1.0GB fixed minimum) |
+| Λ_floor | `Λ_floor = 1.0 / gpu_vram_gb (capacity-scaled irreducible loss floor — NOT a thermodynamic Carnot bound)` | Irreducible capacity-scaled irreducible loss floor (T_c=1.0GB fixed minimum) |
 | Λ_mismatch | `1 − LTP_n` | Additional loss from structural inadequacy |
-| Λ_total | `min(1, Λ_carnot + Λ_mismatch)` | Total loss fraction |
+| Λ_total | `min(1, Λ_floor + Λ_mismatch)` | Total loss fraction |
 | GPU Friction | `0.05 + (1−RLE) × m × 0.5` | Hardware resistance growing with memory pressure |
 | F_raw | `m × S_n` | Newton's 2nd law raw force |
 | F_realized | `max(0, F_raw − friction − m×Λ_total)` | What actually reaches token generation |
@@ -165,7 +165,7 @@ Translates the dimensionless S_n into hardware-grounded physical quantities, com
 
 **Empirical results (AIOS V2, 2026-02-24):**
 
-- **B4:** Physical layer coexists with dimensionless layer without altering any existing values. Λ_carnot = 0.125 for RTX 3060 Ti (8GB).
+- **B4:** Physical layer coexists with dimensionless layer without altering any existing values. Λ_floor = 0.125 for RTX 3060 Ti (8GB).
 - **B5:** Kernel descent fires deterministically at LTP < 0.2 (S_n=0.9, 200 tokens). Lambda_mismatch grows linearly as `1 − LTP`.
 - **B6:** GPU VRAM is a real physics constant: 8GB→85.2% efficiency, 16GB→91.8%, 24GB→94.0%, H100→97.1%.
 - **B7:** RSR identity collapse (0.9878→0.0122) reduces F_realized to 0.0 and triggers kernel descent. Recovery at beat 12 restores full force.
@@ -364,3 +364,4 @@ verify_accomplishments_doc.py  →  16 passed, 0 failed
 **External consistency (code–spec):** Script #9 (requires PDF extraction first).
 
 No identifying information included. Document suitable for publication or review.
+

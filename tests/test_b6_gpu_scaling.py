@@ -55,7 +55,7 @@ def test_carnot_floor_inversely_proportional_to_vram():
     results = run_b6()
     prev_carnot = None
     for gpu_name, (vram_gb, rows) in results.items():
-        carnot = rows[1]["ps"].lambda_carnot  # token > 0 row
+        carnot = rows[1]["ps"].lambda_floor  # token > 0 row
         assert abs(carnot - 1.0 / vram_gb) < 1e-6, f"{gpu_name}: expected {1/vram_gb:.4f} got {carnot:.4f}"
         if prev_carnot is not None:
             assert carnot < prev_carnot, "Larger GPU should have smaller Carnot floor"
@@ -90,3 +90,6 @@ def test_realized_force_positive_across_gpus():
 
 if __name__ == "__main__":
     run_b6()
+
+
+

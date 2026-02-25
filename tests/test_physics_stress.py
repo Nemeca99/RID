@@ -76,8 +76,8 @@ def test_carnot_floor_invariant_across_runs():
         expected = 1.0 / vram
         for _ in range(100):  # 100 per GPU config = 500 total
             ps = _sample(physics)
-            assert abs(ps.lambda_carnot - expected) < 1e-9, \
-                f"GPU {vram}GB: Λ_carnot={ps.lambda_carnot} ≠ {expected}"
+            assert abs(ps.lambda_floor - expected) < 1e-9, \
+                f"GPU {vram}GB: Λ_carnot={ps.lambda_floor} ≠ {expected}"
 
 
 def test_sn_zero_means_no_force():
@@ -104,5 +104,8 @@ def test_larger_gpu_lower_carnot_always():
     for _ in range(100):
         ps8  = _sample(physics_8)
         ps80 = _sample(physics_80)
-        assert ps80.lambda_carnot < ps8.lambda_carnot, \
-            f"80GB GPU has higher Carnot floor than 8GB: {ps80.lambda_carnot} vs {ps8.lambda_carnot}"
+        assert ps80.lambda_floor < ps8.lambda_floor, \
+            f"80GB GPU has higher Carnot floor than 8GB: {ps80.lambda_floor} vs {ps8.lambda_floor}"
+
+
+

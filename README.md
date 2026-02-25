@@ -28,12 +28,12 @@ The latest addition translates dimensionless `S_n` into **physically grounded** 
 
 ```
 F_raw      = prompt_mass × S_n          (Newton's 2nd Law)
-Λ_carnot   = T_c / T_h = 1 / gpu_vram  (Carnot bound — irreducible heat loss)
+Λ_floor   = T_c / T_h = 1 / gpu_vram  (capacity loss floor — irreducible heat loss)
 Λ_mismatch = 1 − LTP_n                  (additional loss from structural mismatch)
 F_realized = max(0, F_raw − friction − mass × Λ_total)
 ```
 
-**Key finding (B8):** `S_n = 0.8535` looks like a 14.65% degradation in the dimensionless view — but translates to **25.1% of realized hardware force lost** due to nonlinear compounding with the Carnot floor.
+**Key finding (B8):** `S_n = 0.8535` looks like a 14.65% degradation in the dimensionless view — but translates to **25.1% of realized hardware force lost** due to nonlinear compounding with the capacity floor.
 
 ---
 
@@ -54,7 +54,7 @@ RID/
 │   ├── test_formulas.py    20 core unit tests
 │   ├── test_b1_load_sweep.py
 │   ├── test_b5_mismatch.py       → kernel descent at LTP < 0.2
-│   ├── test_b6_gpu_scaling.py    → Carnot floor vs GPU VRAM
+│   ├── test_b6_gpu_scaling.py    → capacity floor vs GPU VRAM
 │   ├── test_b7_rsr_physics.py    → identity crisis → F_real = 0
 │   ├── test_b8_isolation.py      → 3-section layer comparison
 │   ├── test_monotonicity.py      → 300-point axis sweeps
@@ -102,7 +102,7 @@ verify_formulas.py: 16/16 PASS — No contradictions found
 | Test | Result |
 |------|--------|
 | B1: STM load sweep | RLE degrades linearly; RSR, LTP remain 1.0 — axis independence confirmed |
-| B4: Physics regression | Dimensionless layer unchanged; Λ_carnot = 0.125 (8GB GPU) |
+| B4: Physics regression | Dimensionless layer unchanged; Λ_floor = 0.125 (8GB GPU) |
 | B5: Mismatch sweep | Kernel descent fires at LTP < 0.2 (deterministic threshold) |
 | B6: GPU scaling | 8GB → 85.2% efficiency; H100 → 97.1% efficiency |
 | B7: RSR crisis | F_realized = 0.0 at identity spike; full recovery by beat 12 |
@@ -133,3 +133,4 @@ See [`RID_Complete.md`](RID_Complete.md) for the complete framework reference in
 ---
 
 *No identifying information. For publication or technical review.*
+

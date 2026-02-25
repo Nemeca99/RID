@@ -3,12 +3,13 @@
 # Source: Semantic physics engine.pdf
 # ==========================================
 """
-Translates the dimensionless RID framework (S_n) into physical
-thermodynamic decay and Newtonian motion for localized hardware limits.
+Translates the dimensionless RID framework (S_n) into physical quantities
+for localized hardware limits: Newtonian output force and a capacity-scaled
+irreducible loss floor.
 
 The dimensionless S_n tells you IF the system is stable.
 The physics engine tells you HOW MUCH force the system can actually exert
-through the hardware, bounded by Carnot-derived loss and GPU friction.
+through the hardware, after accounting for structural loss and friction.
 
                        ┌────────────────────────────────────────┐
                        │   Dimensionless Layer (existing)       │
@@ -20,13 +21,32 @@ through the hardware, bounded by Carnot-derived loss and GPU friction.
                        │   F_realized = F_raw - friction - loss  │
                        │   F_realized ≤ 0 → kernel descent      │
                        └────────────────────────────────────────┘
+
+IMPORTANT — Epistemic Category of Λ_floor
+------------------------------------------
+Λ_floor = 1 / gpu_vram_gb  is a CAPACITY-SCALED IRREDUCIBLE LOSS FLOOR.
+
+It is a structural invariant proxy: a deterministic, hardware-capacity-normalized
+floor on minimum loss per inference step. Larger hardware → smaller irreducible
+floor → higher realized force.
+
+It is INSPIRED BY the functional form of the Carnot efficiency formula
+(which uses T_c / T_h), but this is NOT a thermodynamic Carnot bound.
+We are NOT using live thermal telemetry. We are NOT measuring GPU die
+temperature or ambient temperature. The analogy operates at the form level:
+a ratio of minimum to maximum capacity. The physical domain is hardware
+memory capacity, not heat flow. These are different epistemic categories.
+
+Summary:
+  ✓ Capacity-scaled irreducible loss floor (structural invariant proxy)
+  ✗ Thermodynamic Carnot bound derived from heat flow
 """
 
 import math
 from dataclasses import dataclass
 from typing import Optional
 
-from .thermodynamics import lambda_min_carnot, lambda_mismatch, coupling_amplified_loss
+from .thermodynamics import lambda_mismatch
 
 
 # ─── Physical Constants ─────────────────────────────────────────────────────
@@ -37,31 +57,41 @@ TOKEN_DENSITY       = 0.25       # Mass per token (dimensionless density factor)
 FRICTION_BASELINE   = 0.05       # Minimum friction even when LTP=1.0
 DESCENT_THRESHOLD   = 0.0        # Realized force ≤ this → mandatory descent
 
+# Capacity floor: the minimum VRAM (GB) required to run any inference at all.
+# This is hardware-INDEPENDENT — a model needs ~1GB on ANY GPU (weights + KV cache).
+# Kept as a named constant so the modeling decision is explicit and reviewable.
+CAPACITY_FLOOR_GB   = 1.0
+
 
 @dataclass
 class PhysicsState:
     """
     Physical outputs computed from dimensionless RID values.
     Produced every FIDF tick alongside the ControlEnvelope.
+
+    Note on lambda_floor:
+        This is a capacity-scaled irreducible loss floor, NOT a Carnot thermal bound.
+        lambda_floor = CAPACITY_FLOOR_GB / hardware_capacity_gb = 1 / vram_gb
+        It encodes that smaller hardware carries proportionally higher minimum loss.
     """
     # Inputs (from FIDF)
     s_n:              float = 1.0
     prompt_mass:      float = 0.0
     acceleration:     float = 0.0
 
-    # Thermodynamic
-    lambda_carnot:    float = 0.0     # Minimum irreducible loss (second law)
+    # Loss accounting
+    lambda_floor:     float = 0.0     # Capacity-scaled irreducible loss floor (structural proxy)
     lambda_mismatch:  float = 0.0     # Structural mismatch loss (LTP-derived)
     lambda_total:     float = 0.0     # Combined loss fraction
-    hidden_loss:      float = 0.0     # Energy converted to heat (prompt_mass × lambda_total)
+    hidden_loss:      float = 0.0     # Energy absorbed by loss: prompt_mass × lambda_total
 
     # Newtonian
     gpu_friction:     float = 0.0     # Hardware resistance opposing token generation
-    raw_force:        float = 0.0     # F = mass × acceleration (unimpeded)
+    raw_force:        float = 0.0     # F_raw = mass × acceleration (unimpeded)
     realized_force:   float = 0.0     # F_realized = F_raw - friction - hidden_loss
 
     # Control
-    kernel_descent:   bool  = False   # True when realized_force ≤ 0
+    kernel_descent:   bool  = False   # True when realized_force ≤ 0 and mass > 0
 
 
 class UnifiedSemanticPhysics:
@@ -70,28 +100,27 @@ class UnifiedSemanticPhysics:
 
     hardware_capacity_gb: Physical GPU VRAM in GB (e.g. 8.0 for RTX 3060 Ti)
     time_anchor_dt:       FIDF heartbeat interval in seconds (1.0 = 1Hz)
+
+    The capacity-scaled loss floor is computed once at init:
+        lambda_floor = CAPACITY_FLOOR_GB / hardware_capacity_gb
+
+    This is a STRUCTURAL INVARIANT PROXY — a hardware normalization floor —
+    not a thermodynamic bound. See module docstring for the epistemic distinction.
     """
 
     def __init__(self, hardware_capacity_gb: float = DEFAULT_GPU_VRAM_GB,
                  time_anchor_dt: float = DEFAULT_DT):
-        self.hw_cap    = hardware_capacity_gb
-        self.dt        = time_anchor_dt
+        self.hw_cap  = hardware_capacity_gb
+        self.dt      = time_anchor_dt
 
-        # Carnot thermal reservoirs:
-        # T_h (hot) = hardware capacity in GB (what the GPU CAN do)
-        # T_c (cold) = fixed minimum viable compute floor (hardware-INDEPENDENT)
-        #
-        # T_c = 1.0 represents the irreducible minimum VRAM needed to run any inference
-        # at all (~1GB floor for weights + KV cache overhead).
-        # It does NOT scale with GPU size — a model needs ~1GB minimum on ANY GPU.
-        #
-        # This means Λ_carnot = T_c / T_h DOES depend on GPU:
-        #   8GB  RTX 3060 Ti → 1.0/8.0  = 0.1250 (12.5% heat floor)
-        #   16GB RTX 4080    → 1.0/16.0 = 0.0625 (6.25% heat floor)
-        #   24GB RTX 4090    → 1.0/24.0 = 0.0417 (4.17% heat floor)
-        #   80GB H100        → 1.0/80.0 = 0.0125 (1.25% heat floor)
-        self.T_h = hardware_capacity_gb
-        self.T_c = 1.0    # Fixed: minimum viable inference floor (~1GB equivalent)
+        # Capacity-scaled irreducible loss floor:
+        #   lambda_floor = CAPACITY_FLOOR_GB / hardware_capacity_gb
+        #   8GB  RTX 3060 Ti → 1/8  = 0.1250 (12.5% irreducible floor)
+        #   16GB RTX 4080    → 1/16 = 0.0625 (6.25% floor)
+        #   24GB RTX 4090    → 1/24 = 0.0417 (4.17% floor)
+        #   80GB H100        → 1/80 = 0.0125 (1.25% floor)
+        # Larger hardware = smaller floor = higher realized force at same S_n.
+        self._lambda_floor = CAPACITY_FLOOR_GB / hardware_capacity_gb
 
     def compute(
         self,
@@ -105,7 +134,7 @@ class UnifiedSemanticPhysics:
         Compute physical state from current dimensionless values.
 
         s_n:            Current stability scalar
-        stm_load:       Current STM load (used as mass proxy)
+        stm_load:       Current STM load fraction (used as prompt mass proxy)
         ltp:            Current LTP value (structural adequacy)
         rle:            Current RLE value (retained fraction)
         prompt_tokens:  Approximate token count of current prompt (0 = idle)
@@ -116,47 +145,41 @@ class UnifiedSemanticPhysics:
 
         # ── 1. Prompt Mass ───────────────────────────────────────────────
         # Mass = token count × density factor. Higher mass = harder to accelerate.
-        # Idle (no prompt) has near-zero mass.
-        effective_tokens = max(prompt_tokens, stm_load * 10.0)  # STM load as fallback
+        effective_tokens = max(prompt_tokens, stm_load * 10.0)
         state.prompt_mass = effective_tokens * TOKEN_DENSITY
 
         # ── 2. Acceleration ──────────────────────────────────────────────
         # S_n IS the acceleration scalar. Perfect stability = max acceleration.
-        # S_n < 1 = reduced acceleration (system strain slows generation).
         state.acceleration = s_n
 
-        # ── 3. Thermodynamic Loss (Carnot bound) ─────────────────────────
-        # Lambda_carnot: irreducible minimum loss from second law
-        state.lambda_carnot = lambda_min_carnot(self.T_c, self.T_h)
+        # ── 3. Loss Accounting ───────────────────────────────────────────
+        # lambda_floor: capacity-scaled irreducible loss floor (structural proxy).
+        # NOT a Carnot thermal bound — see module docstring.
+        state.lambda_floor = self._lambda_floor
 
-        # Lambda_mismatch: additional loss when LTP < 1 (structure can't
+        # lambda_mismatch: additional loss when LTP < 1 (structure can't
         # match demand). Uses n_n=ltp (normalized), d_n=1.0 (full demand).
         state.lambda_mismatch = lambda_mismatch(ltp, 1.0)
 
         # Total loss fraction (clamped to [0, 1])
-        state.lambda_total = min(1.0, state.lambda_carnot + state.lambda_mismatch)
+        state.lambda_total = min(1.0, state.lambda_floor + state.lambda_mismatch)
 
-        # Hidden loss: energy converted to heat = mass × total loss fraction
+        # Hidden loss: energy absorbed by structural and capacity losses
         state.hidden_loss = state.prompt_mass * state.lambda_total
 
         # ── 4. GPU Friction ──────────────────────────────────────────────
-        # Friction opposes motion. Higher load = more friction.
-        # Base friction exists even at idle (hardware overhead).
-        # RLE degradation increases friction (memory pressure = more work).
+        # Friction opposes motion. Higher memory pressure (low RLE) = more friction.
         rle_friction = (1.0 - rle) * state.prompt_mass * 0.5
         state.gpu_friction = FRICTION_BASELINE + rle_friction
 
         # ── 5. Newtonian Force ───────────────────────────────────────────
-        # F = m × a (raw force the system is trying to push through the GPU)
+        # F_raw = m × a (raw force before losses)
         state.raw_force = state.prompt_mass * state.acceleration
 
         # F_realized = F_raw - friction - hidden_loss
-        # This is what actually gets through to token generation.
         state.realized_force = max(0.0, state.raw_force - state.gpu_friction - state.hidden_loss)
 
         # ── 6. Kernel Descent Check ──────────────────────────────────────
-        # If realized force is zero or negative, the system cannot produce
-        # useful output. Mandatory descent: reduce complexity, shed load.
         if state.prompt_mass > 0 and state.realized_force <= DESCENT_THRESHOLD:
             state.kernel_descent = True
 
@@ -170,6 +193,8 @@ class UnifiedSemanticPhysics:
             f"  Raw Force       : {state.raw_force:.4f} (F = m × a)",
             f"  GPU Friction    : {state.gpu_friction:.4f}",
             f"  Hidden Loss     : {state.hidden_loss:.4f} (Λ={state.lambda_total:.4f})",
+            f"  Λ_floor         : {state.lambda_floor:.4f} (capacity-scaled irreducible floor)",
+            f"  Λ_mismatch      : {state.lambda_mismatch:.4f} (structural mismatch loss)",
             f"  Realized Force  : {state.realized_force:.4f}",
             f"  Kernel Descent  : {'YES' if state.kernel_descent else 'no'}",
         ]

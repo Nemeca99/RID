@@ -74,3 +74,5 @@ def test_sn_zero_when_any_axis_zero():
 def test_sn_one_when_all_axes_one():
     """S_n = 1.0 iff all three axes = 1.0."""
     assert stability_scalar(1.0, 1.0, 1.0) == 1.0
+
+

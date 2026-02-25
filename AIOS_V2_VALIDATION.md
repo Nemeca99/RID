@@ -124,7 +124,7 @@ This hardware-level optimization accidentally created a perfect microcosm of the
 
 The Semantic Physics Engine (`rid_core/semantic_physics.py`, 2026-02-24) introduced by Phase 13 of AIOS V2 implements this bridge using:
 - **Newton's Second Law:** `F_raw = mass × S_n` where S_n acts as the acceleration scalar
-- **Carnot's Theorem:** `Λ_carnot = T_c / T_h = 1.0 / gpu_vram_gb` (irreducible second-law loss floor)
+- **Carnot's Theorem:** `Λ_floor = Λ_floor = 1.0 / gpu_vram_gb (capacity-scaled irreducible loss floor — NOT a thermodynamic Carnot bound)` (irreducible second-law loss floor)
 - **Mismatch Loss:** `Λ_mismatch = 1 - LTP_n` (additional heat from structural inadequacy)
 - **Realized Force:** `F_realized = F_raw - GPU_friction - hidden_loss`
 - **Kernel Descent:** Triggers when `F_realized ≤ 0` (mandatory complexity reduction)
@@ -155,9 +155,9 @@ This test proved the Semantic Physics Engine can be layered on top of the existi
 ---
 
 ### Test B5 — Mismatch Loss Sweep (Thermodynamic Kernel Descent Trigger)
-This test swept LTP from 1.0 → 0.0 with fixed S_n=0.9, RLE=0.95, tokens=200. Purpose: prove that `Λ_mismatch = 1 - LTP` is additive on top of the Carnot floor, and that the realized force reaches zero at a determinate threshold.
+This test swept LTP from 1.0 → 0.0 with fixed S_n=0.9, RLE=0.95, tokens=200. Purpose: prove that `Λ_mismatch = 1 - LTP` is additive on top of the capacity floor, and that the realized force reaches zero at a determinate threshold.
 
-| LTP | Λ_carnot | Λ_mismatch | Λ_total | F_real | Descent |
+| LTP | Λ_floor | Λ_mismatch | Λ_total | F_real | Descent |
 |---|---|---|---|---|---|
 | 1.0 | 0.1250 | 0.0000 | 0.1250 | 37.4500 | no |
 | 0.7 | 0.1250 | 0.3000 | 0.4250 | 22.4500 | no |
@@ -169,17 +169,17 @@ This test swept LTP from 1.0 → 0.0 with fixed S_n=0.9, RLE=0.95, tokens=200. P
 
 ---
 
-### Test B6 — GPU Hardware Scaling (Carnot Floor Validation)
-This test ran identical load conditions across four GPUs to prove `Λ_carnot = T_c / T_h` is physically grounded to hardware, where `T_c = 1.0 GB` (fixed minimum inference floor) and `T_h = GPU VRAM`.
+### Test B6 — GPU Hardware Scaling (capacity floor Validation)
+This test ran identical load conditions across four GPUs to prove `Λ_floor = T_c / T_h` is physically grounded to hardware, where `T_c = 1.0 GB` (fixed minimum inference floor) and `T_h = GPU VRAM`.
 
-| GPU | VRAM | Λ_carnot | Efficiency @ 1200 tokens |
+| GPU | VRAM | Λ_floor | Efficiency @ 1200 tokens |
 |---|---|---|---|
 | RTX 3060 Ti | 8 GB | 0.1250 | 85.2% |
 | RTX 4080 | 16 GB | 0.0625 | 91.8% |
 | RTX 4090 / A10 | 24 GB | 0.0417 | 94.0% |
 | H100 (SXM) | 80 GB | 0.0125 | 97.1% |
 
-**Result:** Same S_n, same prompt, same tokens — but the H100 delivers 97.1% of its raw force while the RTX 3060 Ti can only deliver 85.2%. The Carnot floor is real hardware physics, not an arbitrary parameter. An H100 burns 10× less energy as mandatory heat than an 8GB consumer card.
+**Result:** Same S_n, same prompt, same tokens — but the H100 delivers 97.1% of its raw force while the RTX 3060 Ti can only deliver 85.2%. The capacity floor is real hardware physics, not an arbitrary parameter. An H100 burns 10× less energy as mandatory heat than an 8GB consumer card.
 
 ---
 
@@ -228,7 +228,7 @@ The RID Framework is not theoretical topology. It is a deterministic, hardware-g
 ### Section 1 — Expanded RID Alone (Physics Engine / S_n pinned to 1.0)
 **Condition:** Semantic Physics Engine runs at maximum acceleration (S_n = 1.0). No RSR, LTP, or RLE involved. Isolates pure Newtonian-Carnot hardware math.
 
-| Tokens | Mass | F_raw | Friction | Λ_carnot | Λ_mismatch | Λ_total | F_real |
+| Tokens | Mass | F_raw | Friction | Λ_floor | Λ_mismatch | Λ_total | F_real |
 |---|---|---|---|---|---|---|---|
 | 0 | 0.0000 | 0.0000 | 0.0500 | 0.1250 | 0.0000 | 0.1250 | 0.0000 |
 | 25 | 6.2500 | 6.2500 | 0.0500 | 0.1250 | 0.0000 | 0.1250 | 5.4188 |
@@ -237,7 +237,7 @@ The RID Framework is not theoretical topology. It is a deterministic, hardware-g
 | 400 | 100.0000 | 100.0000 | 0.0500 | 0.1250 | 0.0000 | 0.1250 | 87.4500 |
 | 600 | 150.0000 | 150.0000 | 0.0500 | 0.1250 | 0.0000 | 0.1250 | 131.2000 |
 
-**Result:** This is the **physical ceiling** — the maximum force the 8GB GPU can deliver at full cognitive stability. Λ_carnot = 0.125 (12.5%) is always present. This value is constant regardless of cognitive state. No dimensionless gating applied.
+**Result:** This is the **physical ceiling** — the maximum force the 8GB GPU can deliver at full cognitive stability. Λ_floor = 0.125 (12.5%) is always present. This value is constant regardless of cognitive state. No dimensionless gating applied.
 
 ---
 
@@ -292,3 +292,4 @@ The trace data from AIOS V2 (Sessions 1–13+, 2026-02-23 through 2026-02-24) pr
 - B8: Isolation comparison — Each layer independently valid; combined, S_n decay at 600 tokens costs 25.1% of realized force
 
 The RID Framework is not theoretical topology. It is a deterministic, hardware-grounded, thermodynamically-bounded stability control system with empirical traces across all claimed axes.
+

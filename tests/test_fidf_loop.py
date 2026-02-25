@@ -112,3 +112,5 @@ def test_fidf_sn_bounded():
     history = _collect_states(200, obs, rec, sd, cf)
     for step, sn, *_ in history:
         assert 0.0 <= sn <= 1.0 + 1e-9, f"Step {step}: S_n={sn} out of [0,1]"
+
+

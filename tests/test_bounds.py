@@ -71,13 +71,13 @@ def test_stability_scalar_bounded():
         assert 0.0 <= sn <= 1.0 + 1e-9, f"S_n out of bounds: {sn}"
 
 
-def test_lambda_carnot_bounded():
+def test_lambda_floor_bounded():
     """Λ_carnot = T_c / T_h must be in (0, 1) for any valid T_c < T_h."""
     for _ in range(N):
         T_c = random.uniform(0.01, 50.0)
         T_h = random.uniform(T_c + 0.01, 200.0)
         v = lambda_min_carnot(T_c, T_h)
-        assert 0.0 < v < 1.0, f"lambda_carnot out of (0,1): {v}"
+        assert 0.0 < v < 1.0, f"lambda_floor out of (0,1): {v}"
 
 
 def test_lambda_mismatch_bounded():
@@ -123,3 +123,6 @@ def test_seol_bounded():
         eff = effective_system_efficiency(sn, ltp)
         expected = min(sn, ltp)
         assert abs(eff - expected) < 1e-12, f"SEOL efficiency wrong: {eff} vs {expected}"
+
+
+
