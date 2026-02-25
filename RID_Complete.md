@@ -474,7 +474,7 @@ ChatGPT challenged the operational utility of S_n:
 - **Telemetry:** Live Time-to-First-Token (TTFT), Generation Speed (Tokens/s), VRAM Utilization, and GPU Temperature.
 - **S_n Calculation:** Driven entirely by RLE (Capacity − Context) / Capacity. Max capacity set to 8192 tokens.
 
-### Empirical Results (RTX 3060 Ti 8GB)
+### Trial 1: Qwen 3-8B (Large Model, VRAM Saturated)
 
 ```
  Tokens |   S_n |  VRAM% |  T_hot |  TTFT(s) |  Speed(T/s) |   Status
