@@ -31,8 +31,9 @@ COL = {
     "GPU_EFF_CLOCK_MHZ":  363,   # GPU Effective Clock [MHz]
 
     # ── CPU ───────────────────────────────────────────────────────────────────
-    # Coolant is SHARED — it's the AIO cold reservoir (T_cold) for both CPU and GPU
-    "COOLANT_TEMP_C":     336,   # AIO Coolant Temperature [°C] ← T_cold for CPU+GPU Carnot
+    # For the liquid-cooled CPU (AIO), coolant is the true T_cold reservoir.
+    # For the air-cooled GPU, coolant temp is used as a proxy for case ambient air.
+    "COOLANT_TEMP_C":     336,   # AIO Coolant Temperature [°C]
     "CPU_CORE_AVG_C":     95,    # Core Temperatures (avg) [°C]
     "CPU_IA_CORES_C":     146,   # CPU IA Cores [°C]  ← T_hot for CPU Carnot
     "CPU_TJMAX_DIST_AVG": 104,   # Distance to TjMAX avg [°C]  (TjMAX - cpu_temp)
@@ -51,7 +52,7 @@ class GPUTelemetry:
     gpu_die_c:      float   # GPU die temperature °C
     gpu_hotspot_c:  float   # GPU hot spot °C   (the TRUE T_hot for Carnot)
     thermal_limit_c:float   # NV thermal throttle limit °C
-    ambient_c:      float   # Coolant/intake temp °C  (T_cold proxy)
+    ambient_c:      float   # Case ambient air proxy °C (from coolant sensor)
 
     # Kelvin versions
     @property
@@ -147,15 +148,15 @@ def _row_to_cpu(row: list) -> CPUTelemetry:
     )
 
 
-def _last_row(csv_path: Path) -> list:
-    last = None
+def _last_row(csv_path: Path) -> list[str]:
+    last: list[str] = []
     with open(csv_path, encoding='latin-1') as f:
         reader = csv.reader(f)
         next(reader)  # skip header
         for row in reader:
             if row:
                 last = row
-    if last is None:
+    if not last:
         raise RuntimeError("CSV is empty or header-only")
     return last
 
@@ -193,7 +194,7 @@ if __name__ == "__main__":
     print("── GPU ──────────────────────────────────────")
     print(f"  Die:         {gpu.gpu_die_c:.1f}°C")
     print(f"  Hot Spot:    {gpu.gpu_hotspot_c:.1f}°C  ({gpu.gpu_hotspot_K:.1f}K)  ← T_hot")
-    print(f"  Coolant:     {gpu.ambient_c:.1f}°C  ({gpu.ambient_K:.1f}K)   ← T_cold (shared AIO)")
+    print(f"  Ambient:     {gpu.ambient_c:.1f}°C  ({gpu.ambient_K:.1f}K)   ← T_cold (case air proxy)")
     print(f"  GPU Carnot:  {gpu.ambient_K/gpu.gpu_hotspot_K:.4f}  (T_cold/T_hot)")
     print(f"  Power:       {gpu.gpu_power_w:.1f}W  ({gpu.gpu_tdp_pct:.1f}% TDP)")
     print(f"  VRAM:        {gpu.vram_used_mb:.0f}/{gpu.vram_total_mb:.0f}MB  ({gpu.vram_used_frac*100:.1f}%)")

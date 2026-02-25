@@ -114,7 +114,7 @@ This document and the RID package cover the **PDF-derived** framework only. A se
 7. Recursive State Reconstruction (RSR) as a universal system law  
 8. RLE–LTP Framework  
 9. The SEOL (System Efficiency Operations Layer) framework  
-10. **Semantic Physics Engine** *(Phase 13, 2026-02-24)* — Translates dimensionless S_n into physical Newtonian-Carnot quantities.
+10. **Semantic Physics Engine** *(Phase 13, 2026-02-24)* — Translates dimensionless S_n into physical hardware limit constraints.
 
 
 Text can be extracted with: `python -m RID --extract-pdf` (output in `RID/extracted_text/`).
@@ -383,8 +383,8 @@ Empirical answer: live HWiNFO telemetry from the actual hardware running this sy
 
 | Component | Spec | Cooling |
 |-----------|------|---------|
-| **CPU** | Intel i7-11700F (Rocket Lake, 8C/16T, 125W TDP) | AIO 240mm liquid |
-| **GPU** | MSI RTX 3060 Ti Ventus 2X 8GB LHR | Air (dual fan) |
+| **CPU** | Intel i7-11700F (Rocket Lake, 8C/16T, 125W TDP) | AIO 240mm liquid (new CPU paste in 2022) |
+| **GPU** | MSI RTX 3060 Ti Ventus 2X 8GB LHR | Air cooled (stock fans, unmodified) |
 
 Telemetry source: HWiNFO64 live CSV (CSVs gitignored; analysis Python scripts tracked in `HW-Info/`).
 
@@ -404,7 +404,7 @@ The formula `F_realized = F_raw − friction − mass × Λ_total` is **unchange
 
 ### GPU Result (RTX 3060 Ti, Air Cooled)
 
-**Baseline telemetry:** GPU hot spot 69.6°C (342.8 K) · Coolant 33.5°C (306.6 K) · VRAM 2284/8192 MB
+**Baseline telemetry:** GPU hot spot 69.6°C (342.8 K) · Case Ambient Proxy (AIO Coolant) 33.5°C (306.6 K) · VRAM 2284/8192 MB
 
 | Mode | λ value | Descent clears at |
 |------|---------|-------------------|
@@ -416,7 +416,7 @@ Mode A and Mode B disagree on descent over the range **S_n = 0.15 → 0.95** (Δ
 
 **Verdict: MAPPING IS LOAD-BEARING.** The choice of Λ shifts the descent firing threshold by 80% of the entire S_n range.
 
-**Physical interpretation:** Air cooling traps a large T_hot/T_cold differential (hotspot 343K vs coolant 307K). Real Carnot says 89.5% of work is irreducibly lost to heat — which is true for this air-cooled GPU at this ambient.
+**Physical interpretation:** The stock air cooling traps a large T_hot/T_cold differential (hotspot 343K vs case ambient proxy 307K). The real Carnot calculation indicates 89.5% of work is irreducibly lost to heat — which is physically accurate for this air-cooled GPU at this ambient case temperature.
 
 ---
 
@@ -434,7 +434,7 @@ Under load (91% TDP): λ_B → 0.9327, λ_C → 0.9138. Both B and C fire descen
 
 **Verdict: MAPPING IS LOAD-BEARING (extreme).** Mode B never escapes descent at any realistic inference workload.
 
-**Physical interpretation:** The AIO is *highly efficient* — only 7°C delta between die and coolant. This means the Carnot efficiency ceiling (what fraction of input energy becomes useful work) is ~2.4% — 97.6% is irreducible loss. This is correct second-law physics. An efficient cooler → small T differential → high Carnot loss fraction. The CPU physically operates near its thermodynamic ceiling.
+**Physical interpretation:** The dedicated CPU AIO liquid cooler (pasted in 2022) is *highly efficient* — only 7°C delta between die and coolant. This means the real thermodynamic Carnot efficiency ceiling (what fraction of input energy becomes useful work) is ~2.4% — 97.6% is irreducible loss. This is correct second-law physics. An efficient cooler → small T differential → high Carnot loss fraction. The CPU physically operates near its thermodynamic ceiling.
 
 **Important:** The CPU with AIO is a **genuine** two-reservoir thermodynamic system (die = T_hot, coolant = T_cold). This is NOT an analogy — it IS Carnot. The static proxy (1/8) is not.
 
