@@ -365,3 +365,96 @@ verify_accomplishments_doc.py  →  16 passed, 0 failed
 
 No identifying information included. Document suitable for publication or review.
 
+---
+
+## Section 11 — Real Hardware Structural Independence Test (2026-02-25)
+
+### Background and Question
+
+ChatGPT raised a critical engineering question about the Phase 13 physics engine:
+
+> *"If we replaced `Λ_floor = 1/VRAM_gb` with real GPU temperature and power telemetry, would the **structure** of the physics layer change? If no — RID is independent of the mapping (interpretive interface). If yes — the mapping is load-bearing and must be derived more rigorously."*
+
+Empirical answer: live HWiNFO telemetry from the actual hardware running this system.
+
+---
+
+### Hardware Under Test
+
+| Component | Spec | Cooling |
+|-----------|------|---------|
+| **CPU** | Intel i7-11700F (Rocket Lake, 8C/16T, 125W TDP) | AIO 240mm liquid |
+| **GPU** | MSI RTX 3060 Ti Ventus 2X 8GB LHR | Air (dual fan) |
+
+Telemetry source: HWiNFO64 live CSV (CSVs gitignored; analysis Python scripts tracked in `HW-Info/`).
+
+---
+
+### Three-Mode Test Design
+
+| Mode | Formula | Category |
+|------|---------|----------|
+| **A — Static Proxy** | `1/capacity_units` (current system default) | Structural invariant normalization |
+| **B — Real Carnot** | `T_cold_K / T_hot_K` (measured temperatures) | True thermodynamic second-law bound |
+| **C — Dynamic Load** | `used/total` or `power/TDP` | Runtime hardware state fraction |
+
+The formula `F_realized = F_raw − friction − mass × Λ_total` is **unchanged** in all three modes. Only the value of Λ changes.
+
+---
+
+### GPU Result (RTX 3060 Ti, Air Cooled)
+
+**Baseline telemetry:** GPU hot spot 69.6°C (342.8 K) · Coolant 33.5°C (306.6 K) · VRAM 2284/8192 MB
+
+| Mode | λ value | Descent clears at |
+|------|---------|-------------------|
+| A — Proxy `1/8.0` | 0.1221 | **S_n ≥ 0.15** |
+| B — Carnot `306.6K/342.8K` | **0.8955** | **S_n ≥ 0.95** |
+| C — VRAM fraction `2162/8192` | 0.2639 | **S_n ≥ 0.30** |
+
+Mode A and Mode B disagree on descent over the range **S_n = 0.15 → 0.95** (ΔS_n = 0.80).
+
+**Verdict: MAPPING IS LOAD-BEARING.** The choice of Λ shifts the descent firing threshold by 80% of the entire S_n range.
+
+**Physical interpretation:** Air cooling traps a large T_hot/T_cold differential (hotspot 343K vs coolant 307K). Real Carnot says 89.5% of work is irreducibly lost to heat — which is true for this air-cooled GPU at this ambient.
+
+---
+
+### CPU Result (i7-11700F, AIO Liquid Cooled)
+
+**Baseline telemetry:** CPU die 40°C (313.1 K) · AIO coolant 32.7°C (305.8 K) · Package 45.5W (36% TDP)
+
+| Mode | λ value (idle) | Descent clears at |
+|------|---------------|-------------------|
+| A — Proxy `1/8 cores` | 0.1250 | **S_n ≥ 0.20** |
+| B — Carnot `305.8K/313.1K` | **0.9767** | **S_n ≥ 1.00 (never clears at load)** |
+| C — Power `45.5W/125W` | 0.3640 | **S_n ≥ 0.40** |
+
+Under load (91% TDP): λ_B → 0.9327, λ_C → 0.9138. Both B and C fire descent at S_n = 0.92.
+
+**Verdict: MAPPING IS LOAD-BEARING (extreme).** Mode B never escapes descent at any realistic inference workload.
+
+**Physical interpretation:** The AIO is *highly efficient* — only 7°C delta between die and coolant. This means the Carnot efficiency ceiling (what fraction of input energy becomes useful work) is ~2.4% — 97.6% is irreducible loss. This is correct second-law physics. An efficient cooler → small T differential → high Carnot loss fraction. The CPU physically operates near its thermodynamic ceiling.
+
+**Important:** The CPU with AIO is a **genuine** two-reservoir thermodynamic system (die = T_hot, coolant = T_cold). This is NOT an analogy — it IS Carnot. The static proxy (1/8) is not.
+
+---
+
+### Unified Conclusion
+
+| Question | Answer |
+|----------|--------|
+| Does swapping Λ change the formula? | **No** — equations unchanged |
+| Does it change the absolute force? | **Yes** — dramatically |
+| Does it change when descent fires? | **Yes** — by up to ΔS_n = 0.80 |
+| Is the physics layer purely interpretive? | **No** |
+| Is the static proxy defensible? | **Yes** — as a normalized floor, clearly labeled |
+| Is the real Carnot more rigorous? | **Yes** — but requires live thermal telemetry |
+
+The static proxy `Λ_floor = 1/VRAM` is valid as a **capacity-scaled structural invariant normalization** — clean, portable, no telemetry needed. It is NOT a thermodynamic Carnot bound.
+
+For a thermodynamically rigorous physics layer, see `HW-Info/stress_compare.py` (GPU) and `HW-Info/cpu_stress_compare.py` (CPU).
+
+*Measurements: 2026-02-25, 00:14–00:28 CST. GIGABYTE B560 DS3H, i7-11700F, MSI RTX 3060 Ti 8GB LHR. HWiNFO64 telemetry.*
+
+
