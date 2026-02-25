@@ -1,0 +1,46 @@
+# RID Framework — .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# PDF extraction (generated files)
+extracted_text/
+
+# Verification reports (generated)
+verification_report.json
+verification_report.txt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# AIOS V2 (not part of standalone RID proof)
+*.xlsx

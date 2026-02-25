@@ -1,0 +1,116 @@
+# ==========================================
+# RID: RLE-LTP-RSR Stability Framework
+# Sources: all PDFs in this folder (run extract_pdf_text.py to extract)
+# ==========================================
+
+from .axioms import (
+    Axiom,
+    rle_n,
+    loss_fraction,
+    law_statement,
+    invariant_preserving_factorization_identity,
+)
+from .discrepancy import (
+    discrepancy_l1,
+    discrepancy_l2,
+    discrepancy_01,
+    DiscrepancyFunc,
+)
+from .triangle import (
+    ltp_n,
+    rsr_n,
+    stability_scalar,
+    rate_scaling,
+    divergence_indicator,
+    diagnostic_step,
+    frequency_from_dt,
+    frequency_from_rpm,
+    interface_efficiency_rsr,
+    TriangleState,
+    DiagnosticResult,
+)
+from .ltp_principle import (
+    DescentTrigger,
+    mandatory_descent_triggers,
+    canonical_statement,
+    compression_baseline_definition,
+    phase_transition_definition,
+    phase_boundary_divergence_near,
+    cost_of_descent,
+    asymmetry_of_layer_movement,
+    invariance_preservation_rule,
+)
+from .thermodynamics import (
+    lambda_min_carnot,
+    eta_max_carnot,
+    lambda_mismatch,
+    lambda_total,
+    coupling_amplified_loss,
+    temporal_mismatch_condition,
+    cost_depth_factorial,
+)
+from .seol import (
+    operational_protocol,
+    voltage_law_summary,
+    effective_system_efficiency,
+    voltage_law_violated,
+    interface_efficiency,
+    SEOLProtocolStep,
+)
+from .fidf import (
+    FIDFConfig,
+    FIDFState,
+    layer1_rsr_ltp_rle,
+    layer2_logic_gate,
+    run_fidf_loop,
+)
+
+__all__ = [
+    "Axiom",
+    "rle_n",
+    "loss_fraction",
+    "law_statement",
+    "discrepancy_l1",
+    "discrepancy_l2",
+    "discrepancy_01",
+    "DiscrepancyFunc",
+    "ltp_n",
+    "rsr_n",
+    "stability_scalar",
+    "rate_scaling",
+    "divergence_indicator",
+    "diagnostic_step",
+    "frequency_from_dt",
+    "frequency_from_rpm",
+    "interface_efficiency_rsr",
+    "TriangleState",
+    "DiagnosticResult",
+    "DescentTrigger",
+    "mandatory_descent_triggers",
+    "canonical_statement",
+    "compression_baseline_definition",
+    "phase_transition_definition",
+    "cost_of_descent",
+    "asymmetry_of_layer_movement",
+    "invariance_preservation_rule",
+    "phase_boundary_divergence_near",
+    "invariant_preserving_factorization_identity",
+    "lambda_min_carnot",
+    "eta_max_carnot",
+    "lambda_mismatch",
+    "lambda_total",
+    "coupling_amplified_loss",
+    "temporal_mismatch_condition",
+    "cost_depth_factorial",
+    "operational_protocol",
+    "voltage_law_summary",
+    "effective_system_efficiency",
+    "voltage_law_violated",
+    "interface_efficiency",
+    "SEOLProtocolStep",
+    "FIDFConfig",
+    "FIDFState",
+    "layer1_rsr_ltp_rle",
+    "layer2_logic_gate",
+    "run_fidf_loop",
+]
