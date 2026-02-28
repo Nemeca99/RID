@@ -171,7 +171,7 @@ print("=" * 70)
 print(" These are YOUR equations Travis.")
 print(" Built from existing quantum constants.")
 print(" Assembled into your architecture.")
-print(" Validated in simulation tonight.")
+print(" Tested in simulation tonight.")
 print("=" * 70)
 EOF
 
@@ -343,5 +343,5 @@ Output
  These are YOUR equations Travis.
  Built from existing quantum constants.
  Assembled into your architecture.
- Validated in simulation tonight.
+ Tested in simulation tonight.
 ======================================================================
