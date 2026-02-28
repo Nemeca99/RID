@@ -18,6 +18,14 @@ import numpy as np
 from rid import rle_n, ltp_n, rsr_n, stability_scalar, diagnostic_step, discrepancy_01
 from rid.semantic_physics import UnifiedSemanticPhysics
 
+HW_INFO_DIR = Path(__file__).resolve().parent / "HW-Info"
+if str(HW_INFO_DIR) not in sys.path:
+    sys.path.append(str(HW_INFO_DIR))
+try:
+    import hw_telemetry
+except ImportError:
+    hw_telemetry = None
+
 # ════════════════════════════════════════════════════════════════════════════════
 # PAGE CONFIG
 # ════════════════════════════════════════════════════════════════════════════════
@@ -268,6 +276,19 @@ with st.sidebar:
     recon  = st.slider("Reconstruction (recon)", 0.0, 1.0, 0.5, 0.01, help="Reconstructed prior state")
 
     st.markdown('<div class="section-title">Physics Engine</div>', unsafe_allow_html=True)
+    
+    # Live Telemetry
+    gpu_temp = None
+    vram_pct = None
+    if hw_telemetry:
+        try:
+            live_data = hw_telemetry.read_latest()
+            gpu_temp = live_data.gpu_hotspot_c
+            vram_pct = live_data.vram_used_frac
+            st.markdown(f'<div style="font-size:0.75rem;color:#4af5b0;margin-bottom:10px">🟢 LIVE SENSORS: {gpu_temp:.1f}°C | {vram_pct*100:.1f}% VRAM</div>', unsafe_allow_html=True)
+        except Exception:
+            st.markdown('<div style="font-size:0.75rem;color:#ffaa00;margin-bottom:10px">⚠ SENSORS OFFLINE (CSV Lock)</div>', unsafe_allow_html=True)
+            
     gpu_options = {"4 GB (Budget)": 4.0, "8 GB RTX 3060 Ti": 8.0,
                    "16 GB RTX 4080": 16.0, "24 GB RTX 4090": 24.0, "80 GB H100": 80.0}
     gpu_label = st.selectbox("GPU VRAM", list(gpu_options.keys()), index=1)
@@ -295,7 +316,7 @@ S_n  = stability_scalar(RSR, LTP, RLE)
 diag = diagnostic_step(RSR, LTP, RLE)
 
 physics = UnifiedSemanticPhysics(hardware_capacity_gb=gpu_vram)
-ps = physics.compute(s_n=S_n, stm_load=U_n, ltp=LTP, rle=RLE, prompt_tokens=float(tokens))
+ps = physics.compute(s_n=S_n, stm_load=U_n, ltp=LTP, rle=RLE, prompt_tokens=float(tokens), gpu_temp=gpu_temp, vram_used_pct=vram_pct)
 
 # Append to history on every render (auto) or on button click
 current = [st.session_state.beat, S_n, RSR, LTP, RLE, ps.realized_force]
@@ -348,17 +369,24 @@ with tab_calc:
           <div style="font-size:0.72rem;color:#4a6080;margin-top:2px">{diag.message if hasattr(diag,'message') and diag.message else 'System operating within parameters'}</div>
         </div>""", unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title" style="margin-top:22px">SEMANTIC PHYSICS ENGINE</div>', unsafe_allow_html=True)
+    env_str = []
+    if getattr(ps, "live_gpu_temp", None) is not None: env_str.append(f"{ps.live_gpu_temp:.1f}°C")
+    if getattr(ps, "live_vram_pct", None) is not None: env_str.append(f"{ps.live_vram_pct*100:.1f}% VRAM")
+    env_title = f" — Grounded: [{', '.join(env_str)}]" if env_str else " — Theoretical Mode"
+    
+    st.markdown(f'<div class="section-title" style="margin-top:22px">SEMANTIC PHYSICS ENGINE{env_title}</div>', unsafe_allow_html=True)
 
     # ── PHYSICS ROW ─────────────────────────────────────────────────────────
     p1, p2, p3, p4, p5, p6 = st.columns(6)
 
-    def phys_card(col, label, value, unit="", color="#c8d8f0", alert=False):
+    def phys_card(col, label, value, unit="", color="#c8d8f0", alert=False, sub_text=None):
         border = "border-color:#ff555540;" if alert else ""
+        sub = f'<div style="font-size:0.65rem;color:#ffaa00;margin-top:2px">{sub_text}</div>' if sub_text else ""
         col.markdown(f"""
         <div class="phys-card" style="{border}">
           <div class="phys-label">{label}</div>
           <div class="phys-value" style="color:{color}">{value:.4f}<span style="font-size:0.7rem;color:#3a5a84"> {unit}</span></div>
+          {sub}
         </div>""", unsafe_allow_html=True)
 
     phys_card(p1, "Λ_floor",   ps.lambda_floor,   "%",  "#00d4ff")
@@ -366,7 +394,9 @@ with tab_calc:
     phys_card(p3, "Λ_total",    ps.lambda_total,    "%",  "#ff8844" if ps.lambda_total > 0.3 else "#4a7aaa")
     phys_card(p4, "F_raw",      ps.raw_force,       "u",  "#bb88ff")
     phys_card(p5, "F_realized", ps.realized_force,  "u",  sn_color(S_n))
-    phys_card(p6, "GPU Friction",ps.gpu_friction,   "u",  "#3a5a84")
+    
+    therm_str = f"Thermal Drag: {ps.thermal_friction:.4f}" if getattr(ps, "thermal_friction", 0) > 0 else None
+    phys_card(p6, "GPU Friction", ps.gpu_friction, "u", "#c8d8f0" if therm_str else "#3a5a84", alert=bool(therm_str), sub_text=therm_str)
 
     # Descent alert
     if ps.kernel_descent:

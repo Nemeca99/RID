@@ -86,6 +86,9 @@ pytest tests/ -v
 
 # Or just the formula verifier
 python verify/verify_formulas.py
+
+# Launch the Streamlit SCADA Dashboard
+L:\.venv\Scripts\streamlit run app.py
 ```
 
 **Expected output:**

@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from hw_telemetry import read_latest, read_cpu_latest, CSV_PATH
 
 LM_STUDIO_URL = "http://192.168.1.21:1234/v1/chat/completions"
-MODEL_ID = "qwen/qwen3-8b"
+MODEL_ID = "qwen/qwen3-1.7b"
 MAX_CONTEXT = 8192  # assumed max context capacity (adjust if model supports more)
 
 # Generate a block of text ~1000 tokens long

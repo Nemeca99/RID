@@ -43,7 +43,7 @@ COL = {
 
 GPU_VRAM_TOTAL_MB  = 8192.0      # RTX 3060 Ti — fixed physical fact
 CPU_TJMAX_C        = 100.0       # i7-11700F Rocket Lake TjMAX — verified from Distance-to-TjMAX
-CPU_TDP_W          = 125.0       # i7-11700F base TDP
+CPU_TDP_W          = 150.0       # i7-11700F unlocked board power limit (often runs at 145W)
 
 
 @dataclass
@@ -107,7 +107,9 @@ class CPUTelemetry:
     @property
     def thermal_headroom_c(self): return CPU_TJMAX_C - self.cpu_ia_c
     @property
-    def load_fraction(self): return self.package_w / CPU_TDP_W
+    def load_fraction(self): 
+        # Cap the load fraction at 0.99 so RLE doesn't go negative if the motherboard pushes past 125W TDP
+        return min(0.99, self.package_w / CPU_TDP_W)
 
 
 def _safe_float(val: str, default=0.0) -> float:
